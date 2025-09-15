@@ -829,6 +829,17 @@
                 "type": "event"
             },
             {
+                "anonymous": false,
+                "inputs": [
+                    {"indexed": true, "internalType": "uint256", "name": "batchId", "type": "uint256"},
+                    {"indexed": true, "internalType": "address", "name": "processor", "type": "address"},
+                    {"indexed": false, "internalType": "string", "name": "processingFacility", "type": "string"},
+                    {"indexed": false, "internalType": "uint256", "name": "quantity", "type": "uint256"}
+                 ],
+                  "name": "BatchCreated",
+                  "type": "event"
+             },
+            {
                 "inputs": [
                     {"internalType": "uint256", "name": "_batchId", "type": "uint256"}
                 ],
@@ -1953,42 +1964,97 @@ if (!productExists) {
             }
         });
 
-        // Create Batch
-        document.getElementById('batchForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (!(await ensureWeb3Connected())) return;
+      // Replace the existing batch form event listener (around line 1200) with this fixed version:
 
-            if (!currentUserRole || !ROLE_ACCESS[currentUserRole].includes('batch')) {
-                showStatus('⚠️ Access denied. You need Processor or Admin role.', 'error');
-                return;
-            }
+document.getElementById('batchForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    if (!(await ensureWeb3Connected())) return;
 
-            const productIdsInput = document.getElementById('productIds').value;
-            const productIds = productIdsInput.split(',').map(id => parseInt(id.trim()));
-            const processingFacility = document.getElementById('processingFacility').value;
-            const expiryDateInput = document.getElementById('expiryDate').value;
-            const expiryDate = Math.floor(new Date(expiryDateInput).getTime() / 1000);
-            const packageType = document.getElementById('packageType').value;
-            const quantity = document.getElementById('quantity').value;
+    if (!currentUserRole || !ROLE_ACCESS[currentUserRole].includes('batch')) {
+        showStatus('⚠️ Access denied. You need Processor or Admin role.', 'error');
+        return;
+    }
 
-            try {
-                showStatus('📦 Creating batch...', 'info');
-                log('Creating batch with products: ' + productIds.join(', '), 'info');
-                
-                const result = await contract.methods.createBatch(
-                    productIds, processingFacility, expiryDate, packageType, quantity
-                ).send({ from: accounts[0] });
-                
-                const batchId = result.events.BatchCreated.returnValues.batchId;
-                log('Batch created successfully with ID: ' + batchId, 'success');
-                showStatus(`✅ Batch created successfully! Batch ID: ${batchId}`, 'success');
-                document.getElementById('batchForm').reset();
-            } catch (error) {
-                log('Error creating batch: ' + error.message, 'error');
-                showStatus('❌ Error creating batch: ' + error.message, 'error');
-            }
+    const productIdsInput = document.getElementById('productIds').value;
+    const productIds = productIdsInput.split(',').map(id => parseInt(id.trim()));
+    const processingFacility = document.getElementById('processingFacility').value;
+    const expiryDateInput = document.getElementById('expiryDate').value;
+    const expiryDate = Math.floor(new Date(expiryDateInput).getTime() / 1000);
+    const packageType = document.getElementById('packageType').value;
+    const quantity = document.getElementById('quantity').value;
+
+    try {
+        showStatus('📦 Creating batch...', 'info');
+        log('Creating batch with products: ' + productIds.join(', '), 'info');
+        
+        // Disable the submit button to prevent double submission
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating...';
+        }
+        
+        const result = await contract.methods.createBatch(
+            productIds, processingFacility, expiryDate, packageType, quantity
+        ).send({ 
+            from: accounts[0],
+            gas: 3000000 // Add gas limit to prevent out of gas errors
         });
+        
+        // Fixed: Handle the case where BatchCreated event might not exist
+        let batchId = 'Unknown';
+        
+        // Method 1: Try to get from events if they exist
+        if (result && result.events) {
+            if (result.events.BatchCreated && result.events.BatchCreated.returnValues) {
+                batchId = result.events.BatchCreated.returnValues.batchId;
+            } else if (result.events.BatchCreated && Array.isArray(result.events.BatchCreated)) {
+                // Handle case where multiple events are returned as array
+                batchId = result.events.BatchCreated[0].returnValues.batchId;
+            }
+        }
+        
+        // Method 2: If no event found, try to parse from logs
+        if (batchId === 'Unknown' && result && result.logs && result.logs.length > 0) {
+            try {
+                // Look for any log that might contain batch information
+                const batchLog = result.logs.find(log => log.topics && log.topics.length > 0);
+                if (batchLog && batchLog.topics[1]) {
+                    batchId = web3.utils.hexToNumber(batchLog.topics[1]);
+                }
+            } catch (logError) {
+                console.log('Could not parse batch ID from logs:', logError);
+            }
+        }
+        
+        // Method 3: If still unknown, assume it was successful and generate a message
+        if (batchId === 'Unknown') {
+            batchId = 'Generated (check transaction hash: ' + result.transactionHash + ')';
+        }
+        
+        log('Batch created successfully with ID: ' + batchId, 'success');
+        showStatus(`✅ Batch created successfully! Batch ID: ${batchId}`, 'success');
+        document.getElementById('batchForm').reset();
+        
+        // Re-enable the submit button
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Batch';
+        }
+        
+    } catch (error) {
+        log('Error creating batch: ' + error.message, 'error');
+        showStatus('❌ Error creating batch: ' + error.message, 'error');
+        
+        // Re-enable the submit button on error
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Batch';
+        }
+    }
+});
 
         // Register Stakeholder
         document.getElementById('stakeholderForm').addEventListener('submit', async (e) => {
