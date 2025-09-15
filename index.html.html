@@ -1113,29 +1113,60 @@
 
         // NEW LOGOUT FUNCTIONALITY
 
-        // Enhanced wallet connection function
-        async function connectWallet() {
-            try {
-                updateConnectionStatus('Connecting...');
-                log('User initiated wallet connection', 'info');
+       // Enhanced mobile MetaMask connection function
+async function connectWallet() {
+    try {
+        updateConnectionStatus('Connecting...');
+        log('User initiated wallet connection', 'info');
+        
+        // Check if we're on mobile
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (typeof window.ethereum === 'undefined') {
+            // If MetaMask is not detected
+            if (isMobile) {
+                // On mobile, try to open MetaMask app
+                const currentUrl = window.location.href;
+                const metamaskDeepLink = `https://metamask.app.link/dapp/${encodeURIComponent(currentUrl)}`;
                 
-                if (typeof window.ethereum === 'undefined') {
-                    throw new Error('MetaMask not found. Please install MetaMask.');
-                }
-
-                // Request account access
-                await window.ethereum.request({ method: 'eth_requestAccounts' });
-                
-                // Initialize Web3
-                await initWeb3();
-                
-            } catch (error) {
-                log('Error connecting wallet: ' + error.message, 'error');
-                showStatus('❌ Failed to connect wallet: ' + error.message, 'error');
-                updateConnectionStatus(false);
+                showStatus('Opening MetaMask app...', 'info');
+                window.open(metamaskDeepLink, '_blank');
+                return;
+            } else {
+                throw new Error('MetaMask not found. Please install MetaMask browser extension.');
             }
         }
 
+        // Check if we're in MetaMask's mobile browser
+        const isMetaMaskBrowser = window.ethereum && window.ethereum.isMetaMask;
+        
+        if (isMobile && !isMetaMaskBrowser) {
+            // Redirect to MetaMask browser
+            const currentUrl = window.location.href;
+            const metamaskBrowserUrl = `https://metamask.app.link/dapp/${encodeURIComponent(currentUrl)}`;
+            
+            showStatus('Redirecting to MetaMask browser...', 'info');
+            setTimeout(() => {
+                window.location.href = metamaskBrowserUrl;
+            }, 1000);
+            return;
+        }
+
+        // Standard connection process
+        await window.ethereum.request({ 
+            method: 'eth_requestAccounts',
+            params: []
+        });
+        
+        // Initialize Web3
+        await initWeb3();
+        
+    } catch (error) {
+        log('Error connecting wallet: ' + error.message, 'error');
+        showStatus('Failed to connect wallet: ' + error.message, 'error');
+        updateConnectionStatus(false);
+    }
+}
         // Switch account function
         async function switchAccount() {
             try {
@@ -2170,6 +2201,69 @@ if (!productExists) {
         };
 
         log('Agricultural Traceability System with Logout functionality initialized', 'info');
+        // Add detection for mobile MetaMask
+function detectMobileMetaMask() {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const hasEthereum = typeof window.ethereum !== 'undefined';
+    const isMetaMaskBrowser = window.ethereum && window.ethereum.isMetaMask;
+    
+    return {
+        isMobile,
+        hasEthereum,
+        isMetaMaskBrowser,
+        canConnect: hasEthereum && (isMetaMaskBrowser || !isMobile)
+    };
+}
+
+// Update the wallet section to show mobile-specific instructions
+function updateWalletSectionForMobile() {
+    const detection = detectMobileMetaMask();
+    const walletSection = document.getElementById('walletSection');
+    
+    if (detection.isMobile && !detection.canConnect) {
+        walletSection.innerHTML = `
+            <h3>📱 Mobile MetaMask Connection</h3>
+            <p>To use this app on mobile, please:</p>
+            <ol style="text-align: left; max-width: 400px; margin: 0 auto;">
+                <li>Open the <strong>MetaMask app</strong> on your phone</li>
+                <li>Tap the <strong>Browser tab</strong> at the bottom</li>
+                <li>Navigate to: <code style="word-break: break-all; background: #f0f0f0; padding: 2px 4px; border-radius: 3px;">${window.location.href}</code></li>
+                <li>Use the app directly in MetaMask's browser</li>
+            </ol>
+            <div style="margin-top: 20px;">
+                <button onclick="openInMetaMaskBrowser()" class="connect-wallet-btn">
+                    📱 Open in MetaMask Browser
+                </button>
+            </div>
+            <div style="margin-top: 15px; font-size: 14px; color: #666;">
+                <strong>Alternative:</strong> Copy the URL above and paste it in MetaMask's browser
+            </div>
+        `;
+    }
+}
+
+// Function to open in MetaMask browser
+function openInMetaMaskBrowser() {
+    const currentUrl = window.location.href;
+    const metamaskBrowserUrl = `https://metamask.app.link/dapp/${encodeURIComponent(currentUrl)}`;
+    
+    showStatus('Opening MetaMask browser...', 'info');
+    window.open(metamaskBrowserUrl, '_blank');
+}
+
+// Initialize mobile detection on page load
+window.addEventListener('load', () => {
+    updateWalletSectionForMobile();
+    
+    // Auto-detect if we're already in MetaMask browser
+    const detection = detectMobileMetaMask();
+    if (detection.canConnect && detection.hasEthereum) {
+        // Try to connect automatically if we're in MetaMask browser
+        setTimeout(() => {
+            connectWallet();
+        }, 1000);
+    }
+});
     </script>
 </body>
 </html> 
