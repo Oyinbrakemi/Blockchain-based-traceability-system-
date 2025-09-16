@@ -484,6 +484,55 @@
                 padding: 20px 15px;
             }
         }
+        .analytics-btn {
+    background: linear-gradient(45deg, #667eea, #764ba2) !important;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    margin: 5px;
+}
+
+.analytics-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(45deg, #5a6fd8, #6a4c93) !important;
+}
+
+.analytics-btn:before {
+    content: "📊";
+    margin-right: 8px;
+}
+
+/* Alternative compact button version */
+.analytics-btn-compact {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.analytics-btn-compact:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
     </style>
 </head>
 <body>
@@ -495,6 +544,9 @@
         <button onclick="connectWallet()" id="connectBtn">🔗 Connect</button>
         <button onclick="switchAccount()" id="switchBtn" class="switch-btn" title="Switch Account">🔄 Switch</button>
         <button onclick="disconnectWallet()" id="disconnectBtn" class="disconnect-btn" title="Disconnect Wallet">🚪 Logout</button>
+        <a href="analytics.html" class="nav-btn analytics-btn">
+    📊 Analytics Dashboard
+</a>
     </div>
 
     <div class="debug-corner">
