@@ -350,11 +350,22 @@
             }, 5000);
         }
 
-        function generateTrackingURL(productId) {
-            const currentUrl = window.location.href;
-            const baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/') + 1);
-            return `${baseUrl}product_details_updated.html?productId=${productId}&contractAddress=${CONTRACT_ADDRESS}`;
-        }
+                function generateTrackingURL(productId) {
+                // Replace 'your-project-name' with your actual Vercel project name
+                // or use your custom domain if you have one
+                const baseUrl = "https://blockchain-based-traceability-system-git-main-brakemis-projects.vercel.app/"; // UPDATE THIS LINE
+                
+                // Alternative: If you have a custom domain:
+                // const baseUrl = "https://yourdomain.com/";
+                
+                return `${baseUrl}product_details_updated.html?productId=${productId}&contractAddress=${CONTRACT_ADDRESS}`;
+            }
+
+            // You can also add this function to help debug URLs:
+            function debugURL() {
+                console.log('Current URL:', window.location.href);
+                console.log('Generated tracking URL example:', generateTrackingURL(123));
+            }
 
         async function generateQRCode(productId, size, customText) {
             try {
