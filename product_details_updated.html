@@ -150,6 +150,136 @@
             color: white;
         }
 
+        .debug-section {
+            background: #f8f9fa;
+            border: 2px dashed #6c757d;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 12px;
+            color: #495057;
+        }
+
+        .date-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #856404;
+        }
+
+        /* Batch Information Styles */
+        .batch-title {
+            color: #2c3e50;
+            margin: 20px 0 15px 0;
+            font-size: 1.4em;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+        }
+
+        .batch-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border: 2px solid #3498db;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .batch-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .batch-card.error {
+            border-color: #e74c3c;
+            background: linear-gradient(135deg, #fdf2f2, #fce4ec);
+        }
+
+        .batch-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .batch-id {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .batch-processor {
+            background: #f8f9fa;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-family: monospace;
+            font-size: 0.85em;
+            color: #666;
+            border: 1px solid #ddd;
+        }
+
+        .batch-details {
+            display: grid;
+            gap: 8px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px dotted #ddd;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-row strong {
+            color: #2c3e50;
+            min-width: 140px;
+        }
+
+        .no-batch {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            color: #856404;
+        }
+
+        .no-batch p {
+            margin: 0 0 10px 0;
+            font-weight: 600;
+        }
+
+        .no-batch small {
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 15px;
+            color: #721c24;
+        }
+
+        .batch-section {
+            margin-top: 20px;
+        }
+
         @media (max-width: 768px) {
             .container {
                 margin: 10px;
@@ -167,6 +297,21 @@
             
             .back-button {
                 margin-top: 15px;
+            }
+
+            .batch-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .detail-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+
+            .detail-row strong {
+                min-width: auto;
             }
         }
     </style>
@@ -191,264 +336,518 @@
         </div>
         
         <div id="productDetails"></div>
+        <div id="batchInfo" class="batch-section"></div>
     </div>
 
     <script>
-        // Complete ABI for the smart contract
-        const CONTRACT_ABI = [
-            {
-                "inputs": [],
-                "stateMutability": "nonpayable",
-                "type": "constructor"
-            },
-            {
-                "anonymous": false,
-                "inputs": [
-                    {"indexed": true, "internalType": "uint256", "name": "batchId", "type": "uint256"},
-                    {"indexed": false, "internalType": "uint256[]", "name": "productIds", "type": "uint256[]"}
-                ],
-                "name": "BatchCreated",
-                "type": "event"
-            },
-            {
-                "anonymous": false,
-                "inputs": [
-                    {"indexed": true, "internalType": "address", "name": "previousOwner", "type": "address"},
-                    {"indexed": true, "internalType": "address", "name": "newOwner", "type": "address"}
-                ],
-                "name": "OwnershipTransferred",
-                "type": "event"
-            },
-            {
-                "anonymous": false,
-                "inputs": [
-                    {"indexed": true, "internalType": "uint256", "name": "productId", "type": "uint256"},
-                    {"indexed": true, "internalType": "string", "name": "reason", "type": "string"}
-                ],
-                "name": "ProductRecalled",
-                "type": "event"
-            },
-            {
-                "anonymous": false,
-                "inputs": [
-                    {"indexed": true, "internalType": "uint256", "name": "productId", "type": "uint256"},
-                    {"indexed": true, "internalType": "address", "name": "farmer", "type": "address"},
-                    {"indexed": false, "internalType": "string", "name": "name", "type": "string"}
-                ],
-                "name": "ProductRegistered",
-                "type": "event"
-            },
-            {
-                "anonymous": false,
-                "inputs": [
-                    {"indexed": true, "internalType": "uint256", "name": "productId", "type": "uint256"},
-                    {"indexed": false, "internalType": "enum AgriTraceability.ProductStatus", "name": "status", "type": "uint8"}
-                ],
-                "name": "ProductStatusUpdated",
-                "type": "event"
-            },
-            {
-                "anonymous": false,
-                "inputs": [
-                    {"indexed": true, "internalType": "uint256", "name": "productId", "type": "uint256"},
-                    {"indexed": false, "internalType": "bool", "name": "passed", "type": "bool"}
-                ],
-                "name": "QualityTestAdded",
-                "type": "event"
-            },
-            {
-                "anonymous": false,
-                "inputs": [
-                    {"indexed": true, "internalType": "address", "name": "stakeholder", "type": "address"},
-                    {"indexed": false, "internalType": "string", "name": "role", "type": "string"}
-                ],
-                "name": "StakeholderRegistered",
-                "type": "event"
-            },
-            {
-                "anonymous": false,
-                "inputs": [
-                    {"indexed": true, "internalType": "uint256", "name": "productId", "type": "uint256"},
-                    {"indexed": false, "internalType": "address", "name": "carrier", "type": "address"}
-                ],
-                "name": "TransportRecorded",
-                "type": "event"
-            },
-            {
-                "inputs": [
-                    {"internalType": "uint256", "name": "_productId", "type": "uint256"},
-                    {"internalType": "string", "name": "_testType", "type": "string"},
-                    {"internalType": "string", "name": "_results", "type": "string"},
-                    {"internalType": "bool", "name": "_passed", "type": "bool"},
-                    {"internalType": "string", "name": "_laboratoryName", "type": "string"}
-                ],
-                "name": "addQualityTest",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {"internalType": "address", "name": "_tester", "type": "address"}
-                ],
-                "name": "authorizeTester",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {"internalType": "uint256[]", "name": "_productIds", "type": "uint256[]"},
-                    {"internalType": "string", "name": "_processingFacility", "type": "string"},
-                    {"internalType": "uint256", "name": "_expiryDate", "type": "uint256"},
-                    {"internalType": "string", "name": "_packageType", "type": "string"},
-                    {"internalType": "uint256", "name": "_quantity", "type": "uint256"}
-                ],
-                "name": "createBatch",
-                "outputs": [
-                    {"internalType": "uint256", "name": "", "type": "uint256"}
-                ],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {"internalType": "uint256", "name": "_productId", "type": "uint256"}
-                ],
-                "name": "completeTransport",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {"internalType": "uint256", "name": "_productId", "type": "uint256"}
-                ],
-                "name": "getProduct",
-                "outputs": [
-                    {
-                        "components": [
-                            {"internalType": "uint256", "name": "id", "type": "uint256"},
-                            {"internalType": "string", "name": "name", "type": "string"},
-                            {"internalType": "string", "name": "variety", "type": "string"},
-                            {"internalType": "string", "name": "origin", "type": "string"},
-                            {"internalType": "address", "name": "farmer", "type": "address"},
-                            {"internalType": "uint256", "name": "plantedDate", "type": "uint256"},
-                            {"internalType": "uint256", "name": "harvestDate", "type": "uint256"},
-                            {"internalType": "enum AgriTraceability.ProductStatus", "name": "status", "type": "uint8"},
-                            {"internalType": "enum AgriTraceability.QualityGrade", "name": "grade", "type": "uint8"},
-                            {"internalType": "bool", "name": "isOrganic", "type": "bool"},
-                            {"internalType": "string[]", "name": "certifications", "type": "string[]"},
-                            {"internalType": "uint256", "name": "batchId", "type": "uint256"}
-                        ],
-                        "internalType": "struct AgriTraceability.Product",
-                        "name": "",
-                        "type": "tuple"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {"internalType": "uint256", "name": "_productId", "type": "uint256"}
-                ],
-                "name": "getQualityTests",
-                "outputs": [
-                    {
-                        "components": [
-                            {"internalType": "string", "name": "testType", "type": "string"},
-                            {"internalType": "string", "name": "results", "type": "string"},
-                            {"internalType": "bool", "name": "passed", "type": "bool"},
-                            {"internalType": "uint256", "name": "timestamp", "type": "uint256"},
-                            {"internalType": "address", "name": "tester", "type": "address"},
-                            {"internalType": "string", "name": "laboratoryName", "type": "string"}
-                        ],
-                        "internalType": "struct AgriTraceability.QualityTest[]",
-                        "name": "",
-                        "type": "tuple[]"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {"internalType": "uint256", "name": "_productId", "type": "uint256"}
-                ],
-                "name": "getTransportHistory",
-                "outputs": [
-                    {
-                        "components": [
-                            {"internalType": "string", "name": "vehicleId", "type": "string"},
-                            {"internalType": "string", "name": "origin", "type": "string"},
-                            {"internalType": "string", "name": "destination", "type": "string"},
-                            {"internalType": "uint256", "name": "startTime", "type": "uint256"},
-                            {"internalType": "uint256", "name": "endTime", "type": "uint256"},
-                            {"internalType": "int256", "name": "temperature", "type": "int256"},
-                            {"internalType": "uint256", "name": "humidity", "type": "uint256"},
-                            {"internalType": "address", "name": "carrier", "type": "address"},
-                            {"internalType": "bool", "name": "isCompleted", "type": "bool"}
-                        ],
-                        "internalType": "struct AgriTraceability.Transport[]",
-                        "name": "",
-                        "type": "tuple[]"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {"internalType": "string", "name": "_name", "type": "string"},
-                    {"internalType": "string", "name": "_variety", "type": "string"},
-                    {"internalType": "string", "name": "_origin", "type": "string"},
-                    {"internalType": "bool", "name": "_isOrganic", "type": "bool"},
-                    {"internalType": "string[]", "name": "_certifications", "type": "string[]"}
-                ],
-                "name": "registerProduct",
-                "outputs": [
-                    {"internalType": "uint256", "name": "", "type": "uint256"}
-                ],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {"internalType": "string", "name": "_role", "type": "string"}
-                ],
-                "name": "registerStakeholder",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {"internalType": "uint256", "name": "_productId", "type": "uint256"},
-                    {"internalType": "string", "name": "_vehicleId", "type": "string"},
-                    {"internalType": "string", "name": "_origin", "type": "string"},
-                    {"internalType": "string", "name": "_destination", "type": "string"},
-                    {"internalType": "int256", "name": "_temperature", "type": "int256"},
-                    {"internalType": "uint256", "name": "_humidity", "type": "uint256"}
-                ],
-                "name": "recordTransport",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {"internalType": "uint256", "name": "_productId", "type": "uint256"},
-                    {"internalType": "enum AgriTraceability.ProductStatus", "name": "_status", "type": "uint8"}
-                ],
-                "name": "updateProductStatus",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            }
-        ];
+       // Complete CONTRACT_ABI - Replace the entire CONTRACT_ABI array in your index.html with this:
 
-        let web3;
+const CONTRACT_ABI = [
+    {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {"indexed": true, "internalType": "address", "name": "previousOwner", "type": "address"},
+            {"indexed": true, "internalType": "address", "name": "newOwner", "type": "address"}
+        ],
+        "name": "OwnershipTransferred",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {"indexed": true, "internalType": "uint256", "name": "productId", "type": "uint256"},
+            {"indexed": false, "internalType": "string", "name": "name", "type": "string"},
+            {"indexed": true, "internalType": "address", "name": "farmer", "type": "address"}
+        ],
+        "name": "ProductRegistered",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {"indexed": true, "internalType": "uint256", "name": "productId", "type": "uint256"},
+            {"indexed": false, "internalType": "enum AgriTraceability.ProductStatus", "name": "status", "type": "uint8"}
+        ],
+        "name": "ProductStatusUpdated",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {"indexed": true, "internalType": "uint256", "name": "productId", "type": "uint256"},
+            {"indexed": false, "internalType": "bool", "name": "passed", "type": "bool"}
+        ],
+        "name": "QualityTestAdded",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {"indexed": true, "internalType": "address", "name": "stakeholder", "type": "address"},
+            {"indexed": false, "internalType": "string", "name": "role", "type": "string"}
+        ],
+        "name": "StakeholderRegistered",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {"indexed": true, "internalType": "address", "name": "tester", "type": "address"}
+        ],
+        "name": "TesterAuthorized",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {"indexed": true, "internalType": "uint256", "name": "productId", "type": "uint256"},
+            {"indexed": false, "internalType": "address", "name": "carrier", "type": "address"}
+        ],
+        "name": "TransportRecorded",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {"indexed": true, "internalType": "uint256", "name": "productId", "type": "uint256"}
+        ],
+        "name": "TransportCompleted",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {"indexed": true, "internalType": "uint256", "name": "batchId", "type": "uint256"},
+            {"indexed": true, "internalType": "address", "name": "processor", "type": "address"},
+            {"indexed": false, "internalType": "string", "name": "processingFacility", "type": "string"},
+            {"indexed": false, "internalType": "uint256", "name": "quantity", "type": "uint256"},
+            {"indexed": false, "internalType": "uint256[]", "name": "productIds", "type": "uint256[]"}
+        ],
+        "name": "BatchCreated",
+        "type": "event"
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "", "type": "address"}
+        ],
+        "name": "authorizedTesters",
+        "outputs": [
+            {"internalType": "bool", "name": "", "type": "bool"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "batchCounter",
+        "outputs": [
+            {"internalType": "uint256", "name": "", "type": "uint256"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "", "type": "uint256"}
+        ],
+        "name": "batches",
+        "outputs": [
+            {"internalType": "uint256", "name": "id", "type": "uint256"},
+            {"internalType": "string", "name": "processingFacility", "type": "string"},
+            {"internalType": "uint256", "name": "creationDate", "type": "uint256"},
+            {"internalType": "uint256", "name": "expiryDate", "type": "uint256"},
+            {"internalType": "string", "name": "packageType", "type": "string"},
+            {"internalType": "uint256", "name": "quantity", "type": "uint256"},
+            {"internalType": "address", "name": "processor", "type": "address"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "owner",
+        "outputs": [
+            {"internalType": "address", "name": "", "type": "address"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "productCounter",
+        "outputs": [
+            {"internalType": "uint256", "name": "", "type": "uint256"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "", "type": "uint256"},
+            {"internalType": "uint256", "name": "", "type": "uint256"}
+        ],
+        "name": "productInBatch",
+        "outputs": [
+            {"internalType": "bool", "name": "", "type": "bool"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "", "type": "uint256"},
+            {"internalType": "uint256", "name": "", "type": "uint256"}
+        ],
+        "name": "productToBatches",
+        "outputs": [
+            {"internalType": "uint256", "name": "", "type": "uint256"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "", "type": "uint256"}
+        ],
+        "name": "products",
+        "outputs": [
+            {"internalType": "uint256", "name": "id", "type": "uint256"},
+            {"internalType": "string", "name": "name", "type": "string"},
+            {"internalType": "string", "name": "variety", "type": "string"},
+            {"internalType": "string", "name": "origin", "type": "string"},
+            {"internalType": "bool", "name": "isOrganic", "type": "bool"},
+            {"internalType": "enum AgriTraceability.ProductStatus", "name": "status", "type": "uint8"},
+            {"internalType": "uint256", "name": "timestamp", "type": "uint256"},
+            {"internalType": "address", "name": "farmer", "type": "address"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "", "type": "uint256"},
+            {"internalType": "uint256", "name": "", "type": "uint256"}
+        ],
+        "name": "qualityTests",
+        "outputs": [
+            {"internalType": "string", "name": "testType", "type": "string"},
+            {"internalType": "string", "name": "results", "type": "string"},
+            {"internalType": "bool", "name": "passed", "type": "bool"},
+            {"internalType": "uint256", "name": "timestamp", "type": "uint256"},
+            {"internalType": "address", "name": "tester", "type": "address"},
+            {"internalType": "string", "name": "laboratoryName", "type": "string"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "", "type": "address"}
+        ],
+        "name": "stakeholders",
+        "outputs": [
+            {"internalType": "string", "name": "role", "type": "string"},
+            {"internalType": "bool", "name": "isRegistered", "type": "bool"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "", "type": "uint256"},
+            {"internalType": "uint256", "name": "", "type": "uint256"}
+        ],
+        "name": "transports",
+        "outputs": [
+            {"internalType": "string", "name": "vehicleId", "type": "string"},
+            {"internalType": "string", "name": "origin", "type": "string"},
+            {"internalType": "string", "name": "destination", "type": "string"},
+            {"internalType": "int256", "name": "temperature", "type": "int256"},
+            {"internalType": "uint256", "name": "humidity", "type": "uint256"},
+            {"internalType": "uint256", "name": "timestamp", "type": "uint256"},
+            {"internalType": "address", "name": "carrier", "type": "address"},
+            {"internalType": "bool", "name": "completed", "type": "bool"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "string", "name": "_role", "type": "string"}
+        ],
+        "name": "registerStakeholder",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+           "inputs": [
+        {"internalType": "string", "name": "_name", "type": "string"},
+        {"internalType": "string", "name": "_variety", "type": "string"},
+        {"internalType": "string", "name": "_origin", "type": "string"},
+        {"internalType": "uint256", "name": "_plantedDate", "type": "uint256"},
+        {"internalType": "uint256", "name": "_harvestedDate", "type": "uint256"},
+        {"internalType": "bool", "name": "_isOrganic", "type": "bool"},
+        {"internalType": "string[]", "name": "_certifications", "type": "string[]"}
+    ],
+    "name": "registerProduct",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+        },
+    {
+    "inputs": [
+        {"internalType": "uint256", "name": "_productId", "type": "uint256"}
+    ],
+    "name": "getProduct",
+    "outputs": [
+        {
+            "components": [
+                {"internalType": "uint256", "name": "id", "type": "uint256"},
+                {"internalType": "string", "name": "name", "type": "string"},
+                {"internalType": "string", "name": "variety", "type": "string"},
+                {"internalType": "string", "name": "origin", "type": "string"},
+                {"internalType": "bool", "name": "isOrganic", "type": "bool"},
+                {"internalType": "string[]", "name": "certifications", "type": "string[]"},
+                {"internalType": "enum AgriTraceability.ProductStatus", "name": "status", "type": "uint8"},
+                {"internalType": "uint256", "name": "timestamp", "type": "uint256"},
+                {"internalType": "address", "name": "farmer", "type": "address"},
+                {"internalType": "uint256", "name": "plantedDate", "type": "uint256"},
+                {"internalType": "uint256", "name": "harvestDate", "type": "uint256"}
+            ],
+            "internalType": "struct AgriTraceability.Product",
+            "name": "",
+            "type": "tuple"
+        }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+},
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "_productId", "type": "uint256"},
+            {"internalType": "string", "name": "_vehicleId", "type": "string"},
+            {"internalType": "string", "name": "_origin", "type": "string"},
+            {"internalType": "string", "name": "_destination", "type": "string"},
+            {"internalType": "int256", "name": "_temperature", "type": "int256"},
+            {"internalType": "uint256", "name": "_humidity", "type": "uint256"}
+        ],
+        "name": "recordTransport",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "_productId", "type": "uint256"}
+        ],
+        "name": "completeTransport",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "_productId", "type": "uint256"},
+            {"internalType": "string", "name": "_testType", "type": "string"},
+            {"internalType": "string", "name": "_results", "type": "string"},
+            {"internalType": "bool", "name": "_passed", "type": "bool"},
+            {"internalType": "string", "name": "_laboratoryName", "type": "string"}
+        ],
+        "name": "addQualityTest",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256[]", "name": "_productIds", "type": "uint256[]"},
+            {"internalType": "string", "name": "_processingFacility", "type": "string"},
+            {"internalType": "uint256", "name": "_expiryDate", "type": "uint256"},
+            {"internalType": "string", "name": "_packageType", "type": "string"},
+            {"internalType": "uint256", "name": "_quantity", "type": "uint256"}
+        ],
+        "name": "createBatch",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "_batchId", "type": "uint256"}
+        ],
+        "name": "getBatch",
+        "outputs": [
+            {
+                "components": [
+                    {"internalType": "uint256", "name": "id", "type": "uint256"},
+                    {"internalType": "uint256[]", "name": "productIds", "type": "uint256[]"},
+                    {"internalType": "string", "name": "processingFacility", "type": "string"},
+                    {"internalType": "uint256", "name": "creationDate", "type": "uint256"},
+                    {"internalType": "uint256", "name": "expiryDate", "type": "uint256"},
+                    {"internalType": "string", "name": "packageType", "type": "string"},
+                    {"internalType": "uint256", "name": "quantity", "type": "uint256"},
+                    {"internalType": "address", "name": "processor", "type": "address"}
+                ],
+                "internalType": "struct AgriTraceability.Batch",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "_productId", "type": "uint256"}
+        ],
+        "name": "getProductBatches",
+        "outputs": [
+            {"internalType": "uint256[]", "name": "", "type": "uint256[]"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "_productId", "type": "uint256"},
+            {"internalType": "uint256", "name": "_batchId", "type": "uint256"}
+        ],
+        "name": "isProductInBatch",
+        "outputs": [
+            {"internalType": "bool", "name": "", "type": "bool"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "_productId", "type": "uint256"}
+        ],
+        "name": "getQualityTests",
+        "outputs": [
+            {
+                "components": [
+                    {"internalType": "string", "name": "testType", "type": "string"},
+                    {"internalType": "string", "name": "results", "type": "string"},
+                    {"internalType": "bool", "name": "passed", "type": "bool"},
+                    {"internalType": "uint256", "name": "timestamp", "type": "uint256"},
+                    {"internalType": "address", "name": "tester", "type": "address"},
+                    {"internalType": "string", "name": "laboratoryName", "type": "string"}
+                ],
+                "internalType": "struct AgriTraceability.QualityTest[]",
+                "name": "",
+                "type": "tuple[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "_productId", "type": "uint256"}
+        ],
+        "name": "getTransports",
+        "outputs": [
+            {
+                "components": [
+                    {"internalType": "string", "name": "vehicleId", "type": "string"},
+                    {"internalType": "string", "name": "origin", "type": "string"},
+                    {"internalType": "string", "name": "destination", "type": "string"},
+                    {"internalType": "int256", "name": "temperature", "type": "int256"},
+                    {"internalType": "uint256", "name": "humidity", "type": "uint256"},
+                    {"internalType": "uint256", "name": "timestamp", "type": "uint256"},
+                    {"internalType": "address", "name": "carrier", "type": "address"},
+                    {"internalType": "bool", "name": "completed", "type": "bool"}
+                ],
+                "internalType": "struct AgriTraceability.Transport[]",
+                "name": "",
+                "type": "tuple[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "_tester", "type": "address"}
+        ],
+        "name": "authorizeTester",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "_tester", "type": "address"}
+        ],
+        "name": "revokeTester",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "_productId", "type": "uint256"},
+            {"internalType": "enum AgriTraceability.ProductStatus", "name": "_status", "type": "uint8"}
+        ],
+        "name": "updateProductStatus",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "uint256", "name": "_productId", "type": "uint256"},
+            {"internalType": "string", "name": "_reason", "type": "string"}
+        ],
+        "name": "recallProduct",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getTotalProducts",
+        "outputs": [
+            {"internalType": "uint256", "name": "", "type": "uint256"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getTotalBatches",
+        "outputs": [
+            {"internalType": "uint256", "name": "", "type": "uint256"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "renounceOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "newOwner", "type": "address"}
+        ],
+        "name": "transferOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    }
+];
+
+       let web3;
         let contract;
         let productId;
         let contractAddress;
@@ -521,21 +920,127 @@
             }
         }
 
+        // Helper function to safely convert BigNumber to string
+        function safeBigNumberToString(value) {
+            try {
+                if (value && value.toString) {
+                    return value.toString();
+                }
+                return value ? value.toString() : '0';
+            } catch (error) {
+                console.warn('Error converting BigNumber:', error);
+                return '0';
+            }
+        }
+
+        // Helper function to safely convert timestamp
+        function safeTimestampToDate(timestamp) {
+            try {
+                const ts = typeof timestamp === 'string' ? parseInt(timestamp) : timestamp;
+                if (ts && ts > 0 && ts < 2147483647) { // Check if it's a valid timestamp
+                    return new Date(ts * 1000).toLocaleDateString();
+                }
+                return 'N/A';
+            } catch (error) {
+                console.warn('Error converting timestamp:', error);
+                return 'N/A';
+            }
+        }
+
         // Load product details from blockchain
         async function loadProductDetails() {
             try {
+                console.log('Loading product details for ID:', productId);
+                
+                // First check if the product exists by trying to get basic info
                 const product = await contract.methods.getProduct(productId).call();
-                const qualityTests = await contract.methods.getQualityTests(productId).call();
-                const transportHistory = await contract.methods.getTransportHistory(productId).call();
+                console.log('Product data received:', product);
+
+                console.log('=== DEBUGGING PRODUCT STRUCTURE ===');
+                console.log('Product keys:', Object.keys(product));
+                console.log('Product values:');
+                for (let key in product) {
+                    console.log(`${key}:`, product[key]);
+                }
+                console.log('=== END DEBUG ===');
+
+                // Extract dates directly from the product object (now that ABI is fixed)
+                let plantedDate = 'N/A';
+                let harvestedDate = 'N/A';
+                
+                // The dates should now be available directly from getProduct
+                if (product.plantedDate) {
+                    plantedDate = safeTimestampToDate(product.plantedDate);
+                    console.log('Planted date found:', plantedDate);
+                }
+                if (product.harvestDate) {
+                    harvestedDate = safeTimestampToDate(product.harvestDate);
+                    console.log('Harvest date found:', harvestedDate);
+                }
+                
+                // If still not found, try alternative field names for backward compatibility
+                if (plantedDate === 'N/A' && product.planted_date) {
+                    plantedDate = safeTimestampToDate(product.planted_date);
+                }
+                if (harvestedDate === 'N/A' && product.harvested_date) {
+                    harvestedDate = safeTimestampToDate(product.harvested_date);
+                }
+
+                // Safely handle the product data
+                const safeProduct = {
+                    id: safeBigNumberToString(product.id),
+                    name: product.name || 'Unknown Product',
+                    variety: product.variety || 'N/A',
+                    origin: product.origin || 'N/A',
+                    farmer: product.farmer || '0x0000000000000000000000000000000000000000',
+                    plantedDate: plantedDate,
+                    harvestedDate: harvestedDate,
+                    status: product.status || 0,
+                    grade: product.grade || 0,
+                    isOrganic: product.isOrganic || false,
+                    certifications: product.certifications || [],
+                    timestamp: product.timestamp || 0
+                };
+
+                let qualityTests = [];
+                let transportHistory = [];
+
+                // Try to get quality tests, but don't fail if there's an error
+                try {
+                    qualityTests = await contract.methods.getQualityTests(productId).call();
+                    console.log('Quality tests loaded:', qualityTests.length);
+                } catch (qtError) {
+                    console.warn('Could not load quality tests:', qtError.message);
+                }
+
+               // Try to get transport history, but don't fail if there's an error
+                try {
+                    transportHistory = await contract.methods.getTransports(productId).call();
+                    console.log('Transport history loaded:', transportHistory.length);
+                } catch (thError) {
+                    console.warn('Could not load transport history:', thError.message);
+                }
 
                 document.getElementById('loading').style.display = 'none';
-                displayProductDetails(product, qualityTests, transportHistory);
+                displayProductDetails(safeProduct, qualityTests, transportHistory);
+                
+                // Load batch information
+                await fetchAndDisplayBatchInfo(productId);
                 
                 // Update page title with product name
-                document.title = `${product.name} - Product Details`;
+                document.title = `${safeProduct.name} - Product Details`;
+                
             } catch (error) {
                 console.error('Error loading product details:', error);
-                showError('Error loading product details: ' + error.message);
+                
+                // Check if it's a numeric overflow error
+                if (error.message.includes('NUMERIC_FAULT') || error.message.includes('overflow')) {
+                    showError('Error: The product ID contains values that are too large to display properly. This might be due to invalid data in the smart contract or a network issue. Please try with a different product ID or contact support.');
+                } else if (error.message.includes('revert') || error.message.includes('execution reverted')) {
+                    showError('Error: Product not found or access denied. Please check the product ID and ensure your wallet is connected to the correct network.');
+                } else {
+                    showError('Error loading product details: ' + error.message + '. Please check your network connection and try again.');
+                }
             }
         }
 
@@ -549,53 +1054,70 @@
         function displayProductDetails(product, qualityTests, transportHistory) {
             const detailsDiv = document.getElementById('productDetails');
             
-            const statusClass = `status-${STATUS_NAMES[product.status].toLowerCase()}`;
+            const statusClass = `status-${STATUS_NAMES[product.status] ? STATUS_NAMES[product.status].toLowerCase() : 'harvested'}`;
+            
+            // Check if dates are available
+            const datesAvailable = product.plantedDate !== 'N/A' || product.harvestedDate !== 'N/A';
             
             let html = `
                 <div class="product-card">
                     <div class="product-header">
                         <div class="product-id">ID: ${product.id}</div>
-                        <div class="status-badge ${statusClass}">${STATUS_NAMES[product.status]}</div>
+                        <div class="status-badge ${statusClass}">${STATUS_NAMES[product.status] || 'Harvested'}</div>
                     </div>
                     
                     <h3>${product.name} - ${product.variety}</h3>
                     
                     <div class="grid">
                         <div><strong>Origin:</strong> ${product.origin}</div>
-                        <div><strong>Farmer:</strong> ${product.farmer}</div>
+                        <div><strong>Farmer:</strong> ${product.farmer.substring(0, 8)}...${product.farmer.substring(product.farmer.length - 6)}</div>
                         <div><strong>Organic:</strong> ${product.isOrganic ? 'Yes' : 'No'}</div>
-                        <div><strong>Grade:</strong> ${GRADE_NAMES[product.grade]}</div>
-                        <div><strong>Planted:</strong> ${product.plantedDate > 0 ? new Date(product.plantedDate * 1000).toLocaleDateString() : 'N/A'}</div>
-                        <div><strong>Harvested:</strong> ${product.harvestDate > 0 ? new Date(product.harvestDate * 1000).toLocaleDateString() : 'N/A'}</div>
+                        <div><strong>Grade:</strong> ${GRADE_NAMES[product.grade] || 'A'}</div>
+                        <div><strong>Planted:</strong> ${product.plantedDate}</div>
+                        <div><strong>Harvested:</strong> ${product.harvestedDate}</div>
+                        <div><strong>Registered:</strong> ${safeTimestampToDate(product.timestamp)}</div>
                     </div>
                     
-                    ${product.certifications.length > 0 ? `
+                    ${!datesAvailable ? `
+                        <div class="date-warning">
+                            <strong>⚠️ Date Information Status:</strong><br>
+                            ${product.plantedDate !== 'N/A' || product.harvestedDate !== 'N/A' 
+                                ? 'Dates successfully retrieved from blockchain!' 
+                                : 'Planted and harvested dates are not available. Make sure your ABI includes the updated getProduct function with plantedDate and harvestedDate fields.'
+                            }
+                        </div>
+                    ` : ''}
+                    
+                    ${product.certifications && product.certifications.length > 0 ? `
                         <div style="margin-top: 15px;">
                             <strong>Certifications:</strong> ${product.certifications.join(', ')}
                         </div>
                     ` : ''}
-                    
-                    ${product.batchId > 0 ? `
-                        <div style="margin-top: 15px;">
-                            <strong>Batch ID:</strong> ${product.batchId}
-                        </div>
-                    ` : ''}
+                </div>
+                
+                <div class="debug-section">
+                    <strong>Debug Info:</strong><br>
+                    Product ID: ${product.id}<br>
+                    Contract Address: ${contractAddress}<br>
+                    Available Fields: name, variety, origin, farmer, status, isOrganic, certifications, timestamp, plantedDate, harvestedDate<br>
+                    Date Status: ${product.plantedDate !== 'N/A' ? 'Planted date found' : 'Planted date missing'}, ${product.harvestedDate !== 'N/A' ? 'Harvest date found' : 'Harvest date missing'}<br>
+                    <em>Note: Make sure your ABI matches your deployed contract's getProduct function signature.</em>
                 </div>
             `;
 
             // Quality Tests
-            if (qualityTests.length > 0) {
+            if (qualityTests && qualityTests.length > 0) {
                 html += `
                     <div class="product-card">
                         <h3>Quality Tests</h3>
                         ${qualityTests.map(test => `
                             <div style="margin: 10px 0; padding: 10px; border-left: 4px solid ${test.passed ? '#27ae60' : '#e74c3c'}; background: rgba(0,0,0,0.05);">
-                                <div><strong>Test:</strong> ${test.testType}</div>
+                                <div><strong>Test:</strong> ${test.testType || 'N/A'}</div>
                                 <div><strong>Result:</strong> ${test.passed ? '✅ Passed' : '❌ Failed'}</div>
-                                <div><strong>Details:</strong> ${test.results}</div>
-                                <div><strong>Laboratory:</strong> ${test.laboratoryName}</div>
-                                <div><strong>Date:</strong> ${new Date(test.timestamp * 1000).toLocaleDateString()}</div>
-                                <div><strong>Tester:</strong> ${test.tester}</div>
+                                <div><strong>Details:</strong> ${test.results || 'N/A'}</div>
+                                <div><strong>Laboratory:</strong> ${test.laboratoryName || 'N/A'}</div>
+                                <div><strong>Date:</strong> ${safeTimestampToDate(test.timestamp)}</div>
+                                <div><strong>Tester:</strong> ${test.tester ? test.tester.substring(0, 8) + '...' + test.tester.substring(test.tester.length - 6) : 'N/A'}</div>
                             </div>
                         `).join('')}
                     </div>
@@ -603,20 +1125,19 @@
             }
 
             // Transport History
-            if (transportHistory.length > 0) {
+            if (transportHistory && transportHistory.length > 0) {
                 html += `
                     <div class="product-card">
                         <h3>Transport History</h3>
                         ${transportHistory.map(transport => `
-                            <div style="margin: 10px 0; padding: 10px; border-left: 4px solid ${transport.isCompleted ? '#27ae60' : '#f39c12'}; background: rgba(0,0,0,0.05);">
-                                <div><strong>Vehicle:</strong> ${transport.vehicleId}</div>
-                                <div><strong>Route:</strong> ${transport.origin} → ${transport.destination}</div>
-                                <div><strong>Status:</strong> ${transport.isCompleted ? '✅ Completed' : '🚛 In Transit'}</div>
-                                <div><strong>Temperature:</strong> ${transport.temperature}°C</div>
-                                <div><strong>Humidity:</strong> ${transport.humidity}%</div>
-                                <div><strong>Started:</strong> ${new Date(transport.startTime * 1000).toLocaleDateString()}</div>
-                                ${transport.endTime > 0 ? `<div><strong>Completed:</strong> ${new Date(transport.endTime * 1000).toLocaleDateString()}</div>` : ''}
-                                <div><strong>Carrier:</strong> ${transport.carrier}</div>
+                            <div style="margin: 10px 0; padding: 10px; border-left: 4px solid ${transport.completed ? '#27ae60' : '#f39c12'}; background: rgba(0,0,0,0.05);">
+                                <div><strong>Vehicle:</strong> ${transport.vehicleId || 'N/A'}</div>
+                                <div><strong>Route:</strong> ${transport.origin || 'N/A'} → ${transport.destination || 'N/A'}</div>
+                                <div><strong>Status:</strong> ${transport.completed ? '✅ Completed' : '🚛 In Transit'}</div>
+                                <div><strong>Temperature:</strong> ${transport.temperature || 'N/A'}°C</div>
+                                <div><strong>Humidity:</strong> ${transport.humidity || 'N/A'}%</div>
+                                <div><strong>Date:</strong> ${safeTimestampToDate(transport.timestamp)}</div>
+                                <div><strong>Carrier:</strong> ${transport.carrier ? transport.carrier.substring(0, 8) + '...' + transport.carrier.substring(transport.carrier.length - 6) : 'N/A'}</div>
                             </div>
                         `).join('')}
                     </div>
@@ -624,6 +1145,114 @@
             }
 
             detailsDiv.innerHTML = html;
+        }
+
+        // Function to fetch and display batch information for a product
+        async function fetchAndDisplayBatchInfo(productId) {
+            try {
+                if (!contract) {
+                    console.log('Contract not initialized');
+                    return;
+                }
+
+                const batchContainer = document.getElementById('batchInfo');
+                if (!batchContainer) {
+                    console.log('Batch info container not found');
+                    return;
+                }
+
+                // Try to get batches containing this product
+                let batchIds = [];
+                try {
+                    batchIds = await contract.methods.getProductBatches(productId).call();
+                    console.log('Batch IDs found:', batchIds);
+                } catch (batchError) {
+                    console.warn('Could not get product batches:', batchError.message);
+                    // If getProductBatches doesn't exist, show no batch message
+                    batchContainer.innerHTML = `
+                        <h3 class="batch-title">📦 Batch Information</h3>
+                        <div class="no-batch">
+                            <p>Batch information not available.</p>
+                            <small>This feature may not be supported by the current contract version.</small>
+                        </div>
+                    `;
+                    return;
+                }
+
+                if (batchIds && batchIds.length > 0) {
+                    let batchHTML = '<h3 class="batch-title">📦 Batch Information</h3>';
+                    
+                    for (let batchId of batchIds) {
+                        try {
+                            const batch = await contract.methods.getBatch(batchId).call();
+                            
+                            const creationDate = safeTimestampToDate(batch.creationDate);
+                            const expiryDate = safeTimestampToDate(batch.expiryDate);
+                            
+                            batchHTML += `
+                                <div class="batch-card">
+                                    <div class="batch-header">
+                                        <span class="batch-id">Batch #${safeBigNumberToString(batchId)}</span>
+                                        <span class="batch-processor">${batch.processor ? batch.processor.substring(0, 8) + '...' : 'N/A'}</span>
+                                    </div>
+                                    <div class="batch-details">
+                                        <div class="detail-row">
+                                            <strong>Processing Facility:</strong> <span>${batch.processingFacility || 'N/A'}</span>
+                                        </div>
+                                        <div class="detail-row">
+                                            <strong>Package Type:</strong> <span>${batch.packageType || 'N/A'}</span>
+                                        </div>
+                                        <div class="detail-row">
+                                            <strong>Quantity:</strong> <span>${safeBigNumberToString(batch.quantity) || 'N/A'}</span>
+                                        </div>
+                                        <div class="detail-row">
+                                            <strong>Created:</strong> <span>${creationDate}</span>
+                                        </div>
+                                        <div class="detail-row">
+                                            <strong>Expires:</strong> <span>${expiryDate}</span>
+                                        </div>
+                                        <div class="detail-row">
+                                            <strong>Products in Batch:</strong> <span>${batch.productIds ? batch.productIds.length : 0} items</span>
+                                        </div>
+                                        <div class="detail-row">
+                                            <strong>Product IDs:</strong> <span>${batch.productIds ? batch.productIds.map(id => safeBigNumberToString(id)).join(', ') : 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        } catch (batchError) {
+                            console.error('Error fetching batch details:', batchError);
+                            batchHTML += `
+                                <div class="batch-card error">
+                                    <p>Error loading batch #${safeBigNumberToString(batchId)}: ${batchError.message}</p>
+                                </div>
+                            `;
+                        }
+                    }
+                    
+                    batchContainer.innerHTML = batchHTML;
+                } else {
+                    batchContainer.innerHTML = `
+                        <h3 class="batch-title">📦 Batch Information</h3>
+                        <div class="no-batch">
+                            <p>This product is not part of any batch yet.</p>
+                            <small>Products are added to batches during the packaging process.</small>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Error fetching batch information:', error);
+                const batchContainer = document.getElementById('batchInfo');
+                if (batchContainer) {
+                    batchContainer.innerHTML = `
+                        <h3 class="batch-title">📦 Batch Information</h3>
+                        <div class="error-message">
+                            <p>Unable to load batch information: ${error.message}</p>
+                        </div>
+                    `;
+                }
+            }
         }
 
         // Initialize when page loads
