@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Generator - Agricultural Traceability</title>
+    <title>QR Code Generator & Scanner - Agricultural Traceability</title>
     <style>
         * {
             margin: 0;
@@ -69,6 +69,42 @@
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
         }
 
+        .tab-container {
+            display: flex;
+            margin-bottom: 30px;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.5);
+            padding: 5px;
+            backdrop-filter: blur(10px);
+        }
+
+        .tab-button {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: #2c3e50;
+        }
+
+        .tab-button.active {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
         .form-group {
             margin-bottom: 20px;
         }
@@ -98,7 +134,7 @@
             transform: translateY(-2px);
         }
 
-        .generate-btn {
+        .generate-btn, .scan-btn {
             background: linear-gradient(45deg, #27ae60, #2ecc71);
             color: white;
             border: none;
@@ -113,18 +149,22 @@
             margin: 20px 0;
         }
 
-        .generate-btn:hover {
+        .scan-btn {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+        }
+
+        .generate-btn:hover, .scan-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
         }
 
-        .generate-btn:disabled {
+        .generate-btn:disabled, .scan-btn:disabled {
             background: #95a5a6;
             cursor: not-allowed;
             transform: none;
         }
 
-        .qr-container {
+        .qr-container, .scanner-container {
             background: white;
             border-radius: 15px;
             padding: 30px;
@@ -134,7 +174,7 @@
             border: 2px solid #e1e8ed;
         }
 
-        .qr-container h3 {
+        .qr-container h3, .scanner-container h3 {
             color: #2c3e50;
             margin-bottom: 20px;
             font-size: 1.5em;
@@ -228,6 +268,103 @@
             display: block;
         }
 
+        /* Scanner specific styles */
+        #scanner-video {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            border-radius: 15px;
+            border: 3px solid #667eea;
+            background: #000;
+        }
+
+        .scanner-overlay {
+            position: relative;
+            display: inline-block;
+        }
+
+        .scanner-frame {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 3px solid #27ae60;
+            border-radius: 15px;
+            background: transparent;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .scanner-frame::before,
+        .scanner-frame::after {
+            content: '';
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 4px solid #27ae60;
+        }
+
+        .scanner-frame::before {
+            top: -4px;
+            left: -4px;
+            border-right: none;
+            border-bottom: none;
+            border-radius: 15px 0 0 0;
+        }
+
+        .scanner-frame::after {
+            bottom: -4px;
+            right: -4px;
+            border-left: none;
+            border-top: none;
+            border-radius: 0 0 15px 0;
+        }
+
+        .scan-result {
+            background: #f8f9fa;
+            border: 2px solid #27ae60;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .scan-result h4 {
+            color: #27ae60;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .scan-result p {
+            margin: 8px 0;
+            font-size: 14px;
+            color: #495057;
+            word-break: break-all;
+        }
+
+        .visit-btn {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin-top: 15px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .visit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
         @media (max-width: 768px) {
             .container {
                 margin: 10px;
@@ -250,10 +387,15 @@
             .grid {
                 grid-template-columns: 1fr;
             }
+
+            .tab-button {
+                font-size: 14px;
+                padding: 12px 16px;
+            }
         }
 
         .hidden {
-            display: none;
+            display: none !important;
         }
 
         .qr-code-image {
@@ -261,6 +403,30 @@
             border-radius: 10px;
             padding: 10px;
             background: white;
+        }
+
+        .scanner-instructions {
+            background: linear-gradient(135deg, #e8f4fd, #d4f1f4);
+            border: 2px solid #3498db;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .scanner-instructions h4 {
+            color: #2980b9;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .scanner-instructions ul {
+            margin-left: 20px;
+            color: #2c3e50;
+        }
+
+        .scanner-instructions li {
+            margin: 5px 0;
         }
     </style>
 </head>
@@ -270,66 +436,115 @@
     </a>
 
     <div class="container">
-        <h1>🔳 QR Code Generator</h1>
-        <p class="subtitle">Generate QR codes for your agricultural products</p>
+        <h1>📱 QR Code Hub</h1>
+        <p class="subtitle">Generate and scan QR codes for agricultural traceability</p>
         
-        <div class="grid" id="featuresSection">
-            <div class="feature-card">
-                <span class="feature-icon">🌾</span>
-                <h3>Product Tracking</h3>
-                <p>Generate QR codes that link directly to your product details in the traceability system</p>
+        <!-- Tab Navigation -->
+        <div class="tab-container">
+            <button class="tab-button active" onclick="switchTab('generator')">
+                📳 Generate QR Code
+            </button>
+            <button class="tab-button" onclick="switchTab('scanner')">
+                📷 Scan QR Code
+            </button>
+        </div>
+
+        <!-- Generator Tab -->
+        <div id="generator-tab" class="tab-content active">
+            <div class="grid" id="featuresSection">
+                <div class="feature-card">
+                    <span class="feature-icon">🌾</span>
+                    <h3>Product Tracking</h3>
+                    <p>Generate QR codes that link directly to your product details in the traceability system</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">📱</span>
+                    <h3>Mobile Friendly</h3>
+                    <p>QR codes work perfectly on all mobile devices for quick product verification</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">⬇️</span>
+                    <h3>Easy Download</h3>
+                    <p>QR codes are generated using online API and can be saved directly from your browser</p>
+                </div>
             </div>
-            <div class="feature-card">
-                <span class="feature-icon">📱</span>
-                <h3>Mobile Friendly</h3>
-                <p>QR codes work perfectly on all mobile devices for quick product verification</p>
-            </div>
-            <div class="feature-card">
-                <span class="feature-icon">⬇️</span>
-                <h3>Easy Download</h3>
-                <p>QR codes are generated using Google's API and can be saved directly from your browser</p>
+
+            <form id="qrForm">
+                <div class="form-group">
+                    <label for="productId">Product ID:</label>
+                    <input type="number" id="productId" required placeholder="Enter the product ID from your traceability system" min="1">
+                </div>
+
+                <div class="form-group">
+                    <label for="qrSize">QR Code Size:</label>
+                    <select id="qrSize">
+                        <option value="200">Small (200x200px)</option>
+                        <option value="300" selected>Medium (300x300px)</option>
+                        <option value="400">Large (400x400px)</option>
+                        <option value="500">Extra Large (500x500px)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="customText">Custom Label (Optional):</label>
+                    <input type="text" id="customText" placeholder="e.g., Organic Tomatoes - Batch #123">
+                </div>
+
+                <button type="submit" class="generate-btn">📳 Generate QR Code</button>
+            </form>
+
+            <div id="qrContainer" class="qr-container hidden">
+                <h3>Your QR Code</h3>
+                <div id="qrcode"></div>
+                <div class="qr-info">
+                    <p><strong>Product ID:</strong> <span id="displayProductId"></span></p>
+                    <p><strong>Tracking URL:</strong> <span id="displayUrl"></span></p>
+                    <p><strong>Custom Label:</strong> <span id="displayLabel"></span></p>
+                    <p><strong>Generated:</strong> <span id="displayTimestamp"></span></p>
+                </div>
+                <button onclick="downloadQRCode()" class="download-btn">⬇️ Download QR Code</button>
+                <button onclick="generateAnother()" class="download-btn" style="background: linear-gradient(45deg, #f39c12, #e67e22);">🔄 Generate Another</button>
             </div>
         </div>
 
-        <form id="qrForm">
-            <div class="form-group">
-                <label for="productId">Product ID:</label>
-                <input type="number" id="productId" required placeholder="Enter the product ID from your traceability system" min="1">
+        <!-- Scanner Tab -->
+        <div id="scanner-tab" class="tab-content">
+            <div class="scanner-instructions">
+                <h4>📷 How to Scan QR Codes:</h4>
+                <ul>
+                    <li>Click "Start Camera" to begin scanning</li>
+                    <li>Point your camera at the QR code</li>
+                    <li>Make sure the QR code is well-lit and fully visible</li>
+                    <li>The scanner will automatically detect and read the code</li>
+                    <li>Click the result link to view product details</li>
+                </ul>
             </div>
 
-            <div class="form-group">
-                <label for="qrSize">QR Code Size:</label>
-                <select id="qrSize">
-                    <option value="200">Small (200x200px)</option>
-                    <option value="300" selected>Medium (300x300px)</option>
-                    <option value="400">Large (400x400px)</option>
-                    <option value="500">Extra Large (500x500px)</option>
-                </select>
+            <div class="scanner-container">
+                <h3>QR Code Scanner</h3>
+                <div class="scanner-overlay">
+                    <video id="scanner-video" autoplay playsinline></video>
+                    <div id="scanner-frame" class="scanner-frame hidden"></div>
+                </div>
+                <button id="start-scanner" class="scan-btn">📷 Start Camera</button>
+                <button id="stop-scanner" class="scan-btn hidden" style="background: linear-gradient(45deg, #e74c3c, #c0392b);">⏹️ Stop Camera</button>
+                
+                <div id="scan-result" class="scan-result hidden">
+                    <h4>✅ QR Code Detected!</h4>
+                    <p><strong>Content:</strong> <span id="scanned-content"></span></p>
+                    <p><strong>Product ID:</strong> <span id="scanned-product-id"></span></p>
+                    <p><strong>Scan Time:</strong> <span id="scan-timestamp"></span></p>
+                    <a id="visit-link" href="#" target="_blank" class="visit-btn">🔗 View Product Details</a>
+                    <button onclick="scanAnother()" class="download-btn">🔄 Scan Another</button>
+                </div>
             </div>
-
-            <div class="form-group">
-                <label for="customText">Custom Label (Optional):</label>
-                <input type="text" id="customText" placeholder="e.g., Organic Tomatoes - Batch #123">
-            </div>
-
-            <button type="submit" class="generate-btn">🔳 Generate QR Code</button>
-        </form>
+        </div>
 
         <div id="status"></div>
-
-        <div id="qrContainer" class="qr-container hidden">
-            <h3>Your QR Code</h3>
-            <div id="qrcode"></div>
-            <div class="qr-info">
-                <p><strong>Product ID:</strong> <span id="displayProductId"></span></p>
-                <p><strong>Tracking URL:</strong> <span id="displayUrl"></span></p>
-                <p><strong>Custom Label:</strong> <span id="displayLabel"></span></p>
-                <p><strong>Generated:</strong> <span id="displayTimestamp"></span></p>
-            </div>
-            <button onclick="downloadQRCode()" class="download-btn">⬇️ Download QR Code</button>
-            <button onclick="generateAnother()" class="download-btn" style="background: linear-gradient(45deg, #f39c12, #e67e22);">🔄 Generate Another</button>
-        </div>
     </div>
+
+    <!-- Include QR Scanner Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.4.2/qr-scanner.umd.min.js"></script>
 
     <script>
         // Get the contract address from the URL parameters if passed, otherwise use default
@@ -339,6 +554,35 @@
         let currentQRImage = null;
         let currentProductId = null;
         let currentTrackingUrl = null;
+        let qrScanner = null;
+        let scannerActive = false;
+
+        // Tab switching functionality
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+            
+            // Stop scanner if switching away from scanner tab
+            if (tabName !== 'scanner' && scannerActive) {
+                stopScanner();
+            }
+            
+            // Clear status when switching tabs
+            document.getElementById('status').innerHTML = '';
+        }
 
         function showStatus(message, type) {
             const statusDiv = document.getElementById('status');
@@ -350,23 +594,12 @@
             }, 5000);
         }
 
-                function generateTrackingURL(productId) {
-                // Replace 'your-project-name' with your actual Vercel project name
-                // or use your custom domain if you have one
-                const baseUrl = "https://blockchain-based-traceability-syste.vercel.app/"; // UPDATE THIS LINE
-                
-                // Alternative: If you have a custom domain:
-                // const baseUrl = "https://yourdomain.com/";
-                
-                return `${baseUrl}product_details_updated.html?productId=${productId}&contractAddress=${CONTRACT_ADDRESS}`;
-            }
+        function generateTrackingURL(productId) {
+            const baseUrl = "https://blockchain-based-traceability-syste.vercel.app/";
+            return `${baseUrl}product_details_updated.html?productId=${productId}&contractAddress=${CONTRACT_ADDRESS}`;
+        }
 
-            // You can also add this function to help debug URLs:
-            function debugURL() {
-                console.log('Current URL:', window.location.href);
-                console.log('Generated tracking URL example:', generateTrackingURL(123));
-            }
-
+        // QR Code Generation Functions
         async function generateQRCode(productId, size, customText) {
             try {
                 const trackingUrl = generateTrackingURL(productId);
@@ -376,7 +609,7 @@
                 const qrCodeDiv = document.getElementById('qrcode');
                 qrCodeDiv.innerHTML = '';
 
-                // Use Google Charts API to generate QR code
+                // Use QR Server API to generate QR code
                 const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(trackingUrl)}&color=2c3e50&bgcolor=ffffff&margin=10&ecc=M`;
                 
                 // Create image element
@@ -474,7 +707,91 @@
             document.getElementById('productId').focus();
         }
 
-        // Form submission handler
+        // QR Code Scanner Functions
+        async function startScanner() {
+            try {
+                const video = document.getElementById('scanner-video');
+                const startBtn = document.getElementById('start-scanner');
+                const stopBtn = document.getElementById('stop-scanner');
+                const scanFrame = document.getElementById('scanner-frame');
+
+                // Check if QrScanner is available
+                if (typeof QrScanner === 'undefined') {
+                    showStatus('❌ QR Scanner library not loaded. Please refresh the page.', 'error');
+                    return;
+                }
+
+                // Hide scan result
+                document.getElementById('scan-result').classList.add('hidden');
+
+                showStatus('📷 Starting camera...', 'info');
+
+                qrScanner = new QrScanner(video, result => {
+                    console.log('QR Code detected:', result.data);
+                    handleScanResult(result.data);
+                });
+
+                await qrScanner.start();
+                
+                scannerActive = true;
+                startBtn.classList.add('hidden');
+                stopBtn.classList.remove('hidden');
+                scanFrame.classList.remove('hidden');
+
+                showStatus('✅ Camera started! Point it at a QR code to scan.', 'success');
+
+            } catch (error) {
+                console.error('Error starting scanner:', error);
+                showStatus('❌ Failed to start camera: ' + error.message + '. Please allow camera access.', 'error');
+            }
+        }
+
+        function stopScanner() {
+            if (qrScanner) {
+                qrScanner.stop();
+                qrScanner.destroy();
+                qrScanner = null;
+            }
+            
+            scannerActive = false;
+            document.getElementById('start-scanner').classList.remove('hidden');
+            document.getElementById('stop-scanner').classList.add('hidden');
+            document.getElementById('scanner-frame').classList.add('hidden');
+            
+            showStatus('⏹️ Camera stopped.', 'info');
+        }
+
+        function handleScanResult(scannedData) {
+            console.log('Handling scan result:', scannedData);
+            
+            // Stop the scanner
+            stopScanner();
+            
+            // Extract product ID from the scanned URL
+            const productIdMatch = scannedData.match(/productId=(\d+)/);
+            const productId = productIdMatch ? productIdMatch[1] : 'Unknown';
+            
+            // Display scan result
+            document.getElementById('scanned-content').textContent = scannedData;
+            document.getElementById('scanned-product-id').textContent = productId;
+            document.getElementById('scan-timestamp').textContent = new Date().toLocaleString();
+            
+            // Set up the visit link
+            const visitLink = document.getElementById('visit-link');
+            visitLink.href = scannedData;
+            
+            // Show the result
+            document.getElementById('scan-result').classList.remove('hidden');
+            
+            showStatus('🎉 QR Code successfully scanned!', 'success');
+        }
+
+        function scanAnother() {
+            document.getElementById('scan-result').classList.add('hidden');
+            document.getElementById('status').innerHTML = '';
+        }
+
+        // Event Listeners
         document.getElementById('qrForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -495,6 +812,9 @@
             }, 500);
         });
 
+        document.getElementById('start-scanner').addEventListener('click', startScanner);
+        document.getElementById('stop-scanner').addEventListener('click', stopScanner);
+
         // Allow Enter key in product ID field
         document.getElementById('productId').addEventListener('keypress', function(event) {
             if (event.key === 'Enter') {
@@ -506,26 +826,9 @@
         // Auto-focus on product ID input when page loads
         window.addEventListener('load', () => {
             document.getElementById('productId').focus();
-            showStatus('✅ QR Code Generator ready! No external libraries required.', 'info');
-            console.log('QR Code Generator initialized');
+            showStatus('✅ QR Code Hub ready! You can generate and scan QR codes.', 'info');
+            console.log('QR Code Hub initialized');
             console.log('Contract Address:', CONTRACT_ADDRESS);
-        });
-
-        // Test URL generation
-        window.addEventListener('load', () => {
-            // Add a subtle hint for users
-            const productIdInput = document.getElementById('productId');
-            productIdInput.addEventListener('input', function() {
-                if (this.value) {
-                    const generateBtn = document.querySelector('.generate-btn');
-                    generateBtn.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)';
-                    generateBtn.style.transform = 'scale(1.02)';
-                } else {
-                    const generateBtn = document.querySelector('.generate-btn');
-                    generateBtn.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)';
-                    generateBtn.style.transform = 'scale(1)';
-                }
-            });
         });
 
         // Add some helpful keyboard shortcuts
@@ -536,13 +839,34 @@
                 downloadQRCode();
             }
             
-            // Escape to generate another
-            if (e.key === 'Escape' && !document.getElementById('qrContainer').classList.contains('hidden')) {
-                generateAnother();
+            // Escape to generate another or scan another
+            if (e.key === 'Escape') {
+                if (!document.getElementById('qrContainer').classList.contains('hidden')) {
+                    generateAnother();
+                } else if (!document.getElementById('scan-result').classList.contains('hidden')) {
+                    scanAnother();
+                } else if (scannerActive) {
+                    stopScanner();
+                }
             }
         });
 
-        console.log('Agricultural QR Code Generator loaded successfully - No external libraries needed!');
+        // Clean up scanner when page unloads
+        window.addEventListener('beforeunload', () => {
+            if (qrScanner) {
+                qrScanner.stop();
+                qrScanner.destroy();
+            }
+        });
+
+        // Handle visibility change (when user switches tabs/minimizes)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && scannerActive) {
+                stopScanner();
+            }
+        });
+
+        console.log('Agricultural QR Code Hub loaded successfully!');
     </script>
 </body>
 </html>
